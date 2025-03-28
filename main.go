@@ -3,38 +3,48 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
-	"net/http"
 	"os"
+	"triple-s/launchServer"
 )
 
+var (
+	ver  bool
+	port int
+	dir  string
+)
+
+func init() {
+	flag.BoolVar(&ver, "ver", true, "for logging process")
+	flag.IntVar(&port, "port", 8080, "Port number")
+	flag.StringVar(&dir, "dir", "data", "Path to the directory")
+}
+
+func Usage() {
+	fmt.Println(`$ ./triple-s --help  
+Simple Storage Service.
+
+**Usage:**
+    triple-s [-port <N>] [-dir <S>]  
+    triple-s --help
+
+**Options:**
+- --help     Show this screen.
+- --port N   Port number
+- --dir S    Path to the directory`)
+}
+
 func main() {
-	// Flags
-	port := flag.Int("port", 8080, "Port number for the server (1-65535)")
-	storageDir := flag.String("dir", "storage", "Path to the storage directory")
+	flag.Usage = Usage
 	flag.Parse()
 
-	// Validation
-	if *port <= 0 || *port > 65535 {
-		log.Fatalf("Invalid port number: %d", *port)
-	}
-	if *storageDir == "" {
-		log.Fatal("Storage directory path is required")
-	}
-	if _, err := os.Stat(*storageDir); os.IsNotExist(err) {
-		log.Fatalf("Storage directory does not exist: %s", *storageDir)
+	triples, err := launchServer.CoreServer(ver, port, dir)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
 	}
 
-	// Handler
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("well well well first step is done ahhahaha"))
-	})
-
-	// Start server
-	addr := fmt.Sprintf(":%d", *port)
-	log.Printf("Starting server on %s...\n", addr[1:])
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatalf("Error 500. Failed to start server: %v", err)
+	if err := triples.Launch(); err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
 	}
 }
